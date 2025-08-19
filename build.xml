@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="json-parser" default="jar" basedir=".">
+    
+    <!-- Project properties -->
+    <property name="project.name" value="json-parser"/>
+    <property name="project.version" value="1.0.0"/>
+    
+    <!-- Directory structure -->
+    <property name="src.dir" value="src/main/java"/>
+    <property name="test.src.dir" value="src/test/java"/>
+    <property name="build.dir" value="build"/>
+    <property name="build.classes.dir" value="${build.dir}/classes"/>
+    <property name="build.test.classes.dir" value="${build.dir}/test-classes"/>
+    <property name="dist.dir" value="dist"/>
+    <property name="lib.dir" value="lib"/>
+    <property name="reports.dir" value="${build.dir}/reports"/>
+    <property name="reports.test.dir" value="${reports.dir}/tests"/>
+    
+    <!-- JAR file names -->
+    <property name="jar.file" value="${dist.dir}/${project.name}-${project.version}.jar"/>
+    <property name="jar.sources.file" value="${dist.dir}/${project.name}-${project.version}-sources.jar"/>
+    
+    <!-- Classpath for compilation -->
+    <path id="compile.classpath">
+        <fileset dir="${lib.dir}" includes="*.jar" erroronmissingdir="false"/>
+    </path>
+    
+    <!-- Classpath for testing -->
+    <path id="test.classpath">
+        <path refid="compile.classpath"/>
+        <pathelement location="${build.classes.dir}"/>
+        <pathelement location="${build.test.classes.dir}"/>
+    </path>
+    
+    <!-- Initialize build directories -->
+    <target name="init" description="Initialize build directories">
+        <mkdir dir="${build.dir}"/>
+        <mkdir dir="${build.classes.dir}"/>
+        <mkdir dir="${build.test.classes.dir}"/>
+        <mkdir dir="${dist.dir}"/>
+        <mkdir dir="${lib.dir}"/>
+        <mkdir dir="${reports.dir}"/>
+        <mkdir dir="${reports.test.dir}"/>
+    </target>
+    
+    <!-- Clean build artifacts -->
+    <target name="clean" description="Clean build artifacts">
+        <delete dir="${build.dir}"/>
+        <delete dir="${dist.dir}"/>
+    </target>
+    
+    <!-- Compile main source code -->
+    <target name="compile" depends="init" description="Compile main source code">
+        <javac srcdir="${src.dir}"
+               destdir="${build.classes.dir}"
+               classpathref="compile.classpath"
+               includeantruntime="false"
+               debug="true"
+               deprecation="true"
+               source="8"
+               target="8">
+            <compilerarg value="-Xlint:unchecked"/>
+        </javac>
+    </target>
+    
+    <!-- Compile test source code -->
+    <target name="compile-tests" depends="compile" description="Compile test source code">
+        <javac srcdir="${test.src.dir}"
+               destdir="${build.test.classes.dir}"
+               classpathref="test.classpath"
+               includeantruntime="false"
+               debug="true"
+               deprecation="true"
+               source="8"
+               target="8">
+            <compilerarg value="-Xlint:unchecked"/>
+        </javac>
+    </target>
+    
+    <!-- Check if JUnit is available -->
+    <target name="check-junit">
+        <available classname="org.junit.Test" classpathref="test.classpath" property="junit.available"/>
+    </target>
+    
+    <!-- Run tests -->
+    <target name="test" depends="compile-tests, check-junit" description="Run unit tests">
+        <fail unless="junit.available" message="JUnit is not available. Please add junit.jar to the lib directory to run tests."/>
+        <junit printsummary="yes" haltonfailure="yes" haltonerror="yes" fork="yes">
+            <classpath refid="test.classpath"/>
+            <formatter type="plain"/>
+            <formatter type="xml"/>
+            <batchtest todir="${reports.test.dir}">
+                <fileset dir="${test.src.dir}">
+                    <include name="**/*Test.java"/>
+                    <include name="**/Test*.java"/>
+                </fileset>
+            </batchtest>
+        </junit>
+    </target>
+    
+    <!-- Run tests if JUnit is available, otherwise skip -->
+    <target name="test-if-available" depends="compile-tests, check-junit" description="Run unit tests if JUnit is available">
+        <antcall target="test-with-junit"/>
+        <antcall target="test-without-junit"/>
+    </target>
+    
+    <target name="test-with-junit" if="junit.available">
+        <junit printsummary="yes" haltonfailure="no" haltonerror="no" fork="yes">
+            <classpath refid="test.classpath"/>
+            <formatter type="plain"/>
+            <formatter type="xml"/>
+            <batchtest todir="${reports.test.dir}">
+                <fileset dir="${test.src.dir}">
+                    <include name="**/*Test.java"/>
+                    <include name="**/Test*.java"/>
+                </fileset>
+            </batchtest>
+        </junit>
+    </target>
+    
+    <target name="test-without-junit" unless="junit.available">
+        <echo message="JUnit is not available. Skipping tests."/>
+        <echo message="To run tests, download junit.jar and place it in the lib directory."/>
+    </target>
+    
+    <!-- Create JAR file -->
+    <target name="jar" depends="compile" description="Create JAR file">
+        <jar destfile="${jar.file}" basedir="${build.classes.dir}">
+            <manifest>
+                <attribute name="Implementation-Title" value="${project.name}"/>
+                <attribute name="Implementation-Version" value="${project.version}"/>
+                <attribute name="Implementation-Vendor" value="JSON Parser Project"/>
+                <attribute name="Built-By" value="${user.name}"/>
+                <attribute name="Built-Date" value="${TODAY}"/>
+                <attribute name="Main-Class" value="com.jsonparser.JSONParserDemo"/>
+            </manifest>
+        </jar>
+        <echo message="JAR file created: ${jar.file}"/>
+    </target>
+    
+    <!-- Create sources JAR file -->
+    <target name="jar-sources" depends="init" description="Create sources JAR file">
+        <jar destfile="${jar.sources.file}" basedir="${src.dir}">
+            <manifest>
+                <attribute name="Implementation-Title" value="${project.name}"/>
+                <attribute name="Implementation-Version" value="${project.version}"/>
+                <attribute name="Implementation-Vendor" value="JSON Parser Project"/>
+                <attribute name="Built-By" value="${user.name}"/>
+                <attribute name="Built-Date" value="${TODAY}"/>
+            </manifest>
+        </jar>
+        <echo message="Sources JAR file created: ${jar.sources.file}"/>
+    </target>
+    
+    <!-- Build everything -->
+    <target name="build" depends="compile, compile-tests" description="Build everything"/>
+    
+    <!-- Create distribution -->
+    <target name="dist" depends="jar, jar-sources" description="Create distribution"/>
+    
+    <!-- Run a quick test of the parser -->
+    <target name="demo" depends="compile" description="Run a quick demo of the JSON parser">
+        <java classname="com.jsonparser.JSONParserDemo" classpathref="test.classpath" fork="true">
+            <arg value='{"name": "John", "age": 30, "city": "New York"}'/>
+        </java>
+    </target>
+    
+    <!-- Display help -->
+    <target name="help" description="Display available targets">
+        <echo message="Available targets:"/>
+        <echo message="  clean        - Clean build artifacts"/>
+        <echo message="  compile      - Compile main source code"/>
+        <echo message="  compile-tests- Compile test source code"/>
+        <echo message="  test-if-available - Run unit tests if JUnit is available"/>
+        <echo message="  test         - Run unit tests (requires JUnit)"/>
+        <echo message="  jar          - Create JAR file"/>
+        <echo message="  jar-sources  - Create sources JAR file"/>
+        <echo message="  build        - Build everything"/>
+        <echo message="  dist         - Create distribution"/>
+        <echo message="  demo         - Run a quick demo"/>
+        <echo message="  help         - Display this help"/>
+    </target>
+    
+</project>
